@@ -1,0 +1,11 @@
+{
+    "name": "kadri_website",
+    "version": "1.0.0",
+    "description": "Un projet Node.js déployé avec Render.",
+    "main": "server.js",
+    "scripts": {
+      "start": "node server.js"
+    },
+    "dependencies": {}
+  }
+  
