@@ -108,7 +108,7 @@ const requestListener = (req, res) => {
                 res.end('Toutes les données ont été supprimées et le compteur réinitialisé.');
             });
         });
-    }       
+    }
 
     // Route non trouvée
     else {
@@ -119,7 +119,8 @@ const requestListener = (req, res) => {
 
 const server = http.createServer(requestListener);
 
-const PORT = 3001;
+// Utiliser le port dynamique fourni par Render, ou un port par défaut pour le développement local
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-    console.log(`Serveur démarré sur http://localhost:${PORT}`);
+    console.log(`Serveur démarré sur http://localhost:${PORT} ou sur https://kadri-website.onrender.com:${PORT}`);
 });
