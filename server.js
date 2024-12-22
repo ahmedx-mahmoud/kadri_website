@@ -35,7 +35,7 @@ const requestListener = (req, res) => {
         return;
     }
 
-    // Check the password for secured routes
+    // Check the password for secured routes (only GET/DELETE routes)
     const password = req.headers['authorization']; // The password is sent in the headers
     if ((req.method === 'GET' || req.method === 'DELETE') && password !== ADMIN_PASSWORD) {
         res.writeHead(401, { 'Content-Type': 'text/plain' });
@@ -51,6 +51,7 @@ const requestListener = (req, res) => {
         });
 
         req.on('end', async () => {
+            console.log("Données reçues : ", body); // Log the received data for debugging
             try {
                 const data = JSON.parse(body);
                 const { email, password } = data;
