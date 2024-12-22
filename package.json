@@ -4,9 +4,9 @@
   "description": "Un projet Node.js déployé avec Render.",
   "main": "server.js",
   "scripts": {
-      "start": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-      "sqlite3": "^5.1.6"
+    "pg": "^8.10.0"   // Add the pg package for PostgreSQL
   }
 }
